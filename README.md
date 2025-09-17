@@ -5,6 +5,8 @@ This project demonstrates how to set up nginx as a reverse proxy for multiple we
 - **Budget Tracker** (`/budget`) - A personal finance management application
 - **Home Roster** (`/roster`) - A household chore management system
 
+> **🔧 Configuration Note**: This guide uses example IP address `35.183.32.162` and DNS `ec2-35-183-32-162.ca-central-1.compute.amazonaws.com` for demonstration purposes. **You must replace these with your own server's actual public IP address and domain name** throughout the configuration files and commands.
+
 ## Project Structure
 
 ```
@@ -28,8 +30,10 @@ Follow these steps to manually install and configure nginx on an Ubuntu server.
 
 - Ubuntu 20.04 LTS or later
 - Root or sudo access
-- Public IP address: `35.183.32.162`
-- Public DNS: `ec2-35-183-32-162.ca-central-1.compute.amazonaws.com`
+- **Your own public IP address** (replace `35.183.32.162` with your actual server IP)
+- **Your own public DNS** (replace `ec2-35-183-32-162.ca-central-1.compute.amazonaws.com` with your actual domain)
+
+> **⚠️ Important**: The IP address `35.183.32.162` and DNS `ec2-35-183-32-162.ca-central-1.compute.amazonaws.com` used in this guide are **example values only**. You must replace these with your own server's actual public IP address and domain name.
 
 ### Step 1: Update System Packages
 
@@ -148,6 +152,13 @@ curl http://localhost/roster
 
 Once everything is set up, you can access your applications at:
 
+> **📝 Replace with your actual server details:**
+- **Main Landing Page**: `http://YOUR_PUBLIC_IP/`
+- **Budget Tracker**: `http://YOUR_PUBLIC_IP/budget`
+- **Home Roster**: `http://YOUR_PUBLIC_IP/roster`
+- **Health Check**: `http://YOUR_PUBLIC_IP/health`
+
+**Example** (using the placeholder values from this guide):
 - **Main Landing Page**: `http://35.183.32.162/`
 - **Budget Tracker**: `http://35.183.32.162/budget`
 - **Home Roster**: `http://35.183.32.162/roster`
