@@ -13,6 +13,7 @@ nginx-proxy/
 │   └── index.html          # Budget Tracker application
 ├── roster-app/
 │   └── index.html          # Home Roster application
+├── index.html              # Main landing page
 ├── nginx.conf              # Nginx reverse proxy configuration
 └── README.md               # This file
 ```
@@ -20,6 +21,8 @@ nginx-proxy/
 ## Installation on Ubuntu Server
 
 Follow these steps to manually install and configure nginx on an Ubuntu server.
+
+> **Note**: The `index.html` file is designed to work both locally (for testing) and through nginx. When opened locally, it will link directly to the app files. When served through nginx, the links will work with the reverse proxy paths (`/budget` and `/roster`).
 
 ### Prerequisites
 
@@ -79,26 +82,29 @@ sudo ufw status
 ### Step 4: Create Directory Structure
 
 ```bash
-# Create directories for web applications
-sudo mkdir -p /var/www/budget-app
-sudo mkdir -p /var/www/roster-app
+# Create directories for web applications in nginx default location
+sudo mkdir -p /usr/share/nginx/html/budget-app
+sudo mkdir -p /usr/share/nginx/html/roster-app
 
 # Set proper permissions
-sudo chown -R www-data:www-data /var/www/
-sudo chmod -R 755 /var/www/
+sudo chown -R www-data:www-data /usr/share/nginx/html/
+sudo chmod -R 755 /usr/share/nginx/html/
 ```
 
 ### Step 5: Deploy Web Applications
 
 ```bash
 # Copy budget app files
-sudo cp -r budget-app/* /var/www/budget-app/
+sudo cp -r budget-app/* /usr/share/nginx/html/budget-app/
 
 # Copy roster app files
-sudo cp -r roster-app/* /var/www/roster-app/
+sudo cp -r roster-app/* /usr/share/nginx/html/roster-app/
+
+# Copy main landing page
+sudo cp index.html /usr/share/nginx/html/
 
 # Set proper ownership
-sudo chown -R www-data:www-data /var/www/
+sudo chown -R www-data:www-data /usr/share/nginx/html/
 ```
 
 ### Step 6: Configure Nginx Reverse Proxy
@@ -107,103 +113,8 @@ sudo chown -R www-data:www-data /var/www/
 # Backup original nginx configuration
 sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
 
-# Create new nginx configuration
-sudo nano /etc/nginx/sites-available/default
-```
-
-Replace the entire content with:
-
-```nginx
-# Nginx Reverse Proxy Configuration
-server {
-    listen 80;
-    server_name 35.183.32.162 ec2-35-183-32-162.ca-central-1.compute.amazonaws.com;
-    
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-
-    # Root location - redirect to budget app by default
-    location / {
-        root /var/www/budget-app;
-        index index.html;
-        try_files $uri $uri/ =404;
-    }
-
-    # Budget App - accessible at /budget or /budget/
-    location /budget {
-        alias /var/www/budget-app;
-        index index.html;
-        try_files $uri $uri/ /budget/index.html;
-        
-        # Remove /budget prefix from requests
-        location ~ ^/budget/(.*)$ {
-            alias /var/www/budget-app;
-            try_files /$1 /$1/ /budget/index.html;
-        }
-    }
-
-    # Roster App - accessible at /roster or /roster/
-    location /roster {
-        alias /var/www/roster-app;
-        index index.html;
-        try_files $uri $uri/ /roster/index.html;
-        
-        # Remove /roster prefix from requests
-        location ~ ^/roster/(.*)$ {
-            alias /var/www/roster-app;
-            try_files /$1 /$1/ /roster/index.html;
-        }
-    }
-
-    # Health check endpoint
-    location /health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-
-    # Static files caching
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        access_log off;
-    }
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types
-        text/plain
-        text/css
-        text/xml
-        text/javascript
-        application/json
-        application/javascript
-        application/xml+rss
-        application/atom+xml
-        image/svg+xml;
-
-    # Error pages
-    error_page 404 /404.html;
-    error_page 500 502 503 504 /50x.html;
-    
-    location = /404.html {
-        root /var/www/html;
-        internal;
-    }
-    
-    location = /50x.html {
-        root /var/www/html;
-        internal;
-    }
-}
+# Copy the nginx configuration file
+sudo cp nginx.conf /etc/nginx/sites-available/default
 ```
 
 ### Step 7: Test and Reload Nginx
@@ -219,69 +130,7 @@ sudo systemctl reload nginx
 sudo systemctl status nginx
 ```
 
-### Step 8: Create Landing Page
-
-```bash
-# Create a simple landing page
-sudo nano /var/www/budget-app/index.html
-```
-
-Add this content to create a landing page that redirects to the budget app:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nginx Reverse Proxy Demo</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; margin-bottom: 30px; }
-        .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .app-card { padding: 20px; border: 2px solid #e0e0e0; border-radius: 8px; text-align: center; transition: all 0.3s ease; }
-        .app-card:hover { border-color: #007bff; transform: translateY(-2px); }
-        .app-card h2 { color: #007bff; margin-bottom: 10px; }
-        .app-card p { color: #666; margin-bottom: 20px; }
-        .btn { display: inline-block; padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s ease; }
-        .btn:hover { background: #0056b3; }
-        .health { margin-top: 30px; padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🏠 Nginx Reverse Proxy Demo</h1>
-        <p style="text-align: center; color: #666; margin-bottom: 40px;">Welcome to the nginx reverse proxy demonstration. Choose an application to explore:</p>
-        <div class="apps">
-            <div class="app-card">
-                <h2>💰 Budget Tracker</h2>
-                <p>A comprehensive budget management application for tracking income and expenses.</p>
-                <a href="/budget" class="btn">Open Budget App</a>
-            </div>
-            <div class="app-card">
-                <h2>🏠 Home Roster</h2>
-                <p>A household chore management system for organizing tasks between occupants.</p>
-                <a href="/roster" class="btn">Open Roster App</a>
-            </div>
-        </div>
-        <div class="health">
-            <h3>✅ System Status</h3>
-            <p>Nginx reverse proxy is running successfully. All applications are accessible through their respective paths.</p>
-            <p><strong>Available endpoints:</strong></p>
-            <ul>
-                <li><code>/</code> - This landing page</li>
-                <li><code>/budget</code> - Budget Tracker application</li>
-                <li><code>/roster</code> - Home Roster application</li>
-                <li><code>/health</code> - Health check endpoint</li>
-            </ul>
-        </div>
-    </div>
-</body>
-</html>
-```
-
-### Step 9: Verify Installation
+### Step 8: Verify Installation
 
 ```bash
 # Check if nginx is running
@@ -295,7 +144,7 @@ curl http://localhost/budget
 curl http://localhost/roster
 ```
 
-### Step 10: Access Your Applications
+### Step 9: Access Your Applications
 
 Once everything is set up, you can access your applications at:
 
